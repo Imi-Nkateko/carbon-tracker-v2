@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Carbon Footprint Logger</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    /* Custom animations and overrides */
+    .toast {
+      transition: opacity 0.25s;
+    }
+
+    .btn:active {
+      transform: scale(0.98);
+    }
+
+    .comparison-bar {
+      overflow: visible;
+    }
+
+    .comp-avg-line {
+      top: -3px;
+      height: 18px;
+      width: 2px;
+    }
+
+    .week-day-bar {
+      transition: height 0.3s;
+      min-height: 2px;
+    }
+
+    .progress-fill {
+      transition: width 0.4s;
+    }
+
+    /* Custom scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: #f1f1f1;
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #c1c1c1;
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #a8a8a8;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      ::-webkit-scrollbar-track {
+        background: #2a2a2a;
+      }
+
+      ::-webkit-scrollbar-thumb {
+        background: #555;
+      }
+
+      ::-webkit-scrollbar-thumb:hover {
+        background: #666;
+      }
+    }
+  </style>
+</head>
+
+<body class="bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+  <h2 class="sr-only">Carbon footprint logger — track daily activities and emissions</h2>
+  <div class="max-w-4xl mx-auto p-4">
+    <!-- Header -->
+    <div class="flex items-center gap-2.5 mb-5">
+      <div class="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2"
+          stroke-linecap="round">
+          <path d="M12 2a10 10 0 0 1 10 10c0 5.52-4.48 10-10 10S2 17.52 2 12" />
+          <path d="M12 6v6l4 2" />
+        </svg>
+      </div>
+      <div>
+        <div class="text-lg font-medium">Footprint Logger</div>
+        <div class="text-xs text-gray-500 dark:text-gray-400" id="user-subtitle">Track your daily carbon emissions</div>
+      </div>
+      <div class="ml-auto flex gap-1.5 items-center">
+        <div id="user-pill"
+          class="hidden items-center gap-1.5 bg-gray-100 dark:bg-gray-800 px-2.5 py-1 rounded-full border border-gray-200 dark:border-gray-700 text-sm">
+          <div id="avatar-circle"
+            class="w-5.5 h-5.5 rounded-full bg-emerald-600 flex items-center justify-center text-xs font-medium text-white">
+            ?</div>
+          <span id="user-name-display">User</span>
+        </div>
+        <button
+          class="px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-transparent cursor-pointer text-sm font-medium text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-150"
+          id="auth-toggle-btn">Sign in</button>
+      </div>
+    </div>
+
+    <!-- Navigation -->
+    <div
+      class="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-xl p-1 mb-6 border border-gray-200 dark:border-gray-700">
+      <button
+        class="nav-btn flex-1 py-2 px-3 border-none bg-transparent rounded-lg text-sm font-medium cursor-pointer text-gray-600 dark:text-gray-400 transition-all duration-150 active"
+        data-page="log">Log Activity</button>
+      <button
+        class="nav-btn flex-1 py-2 px-3 border-none bg-transparent rounded-lg text-sm font-medium cursor-pointer text-gray-600 dark:text-gray-400 transition-all duration-150"
+        data-page="dashboard">Dashboard</button>
+      <button
+        class="nav-btn flex-1 py-2 px-3 border-none bg-transparent rounded-lg text-sm font-medium cursor-pointer text-gray-600 dark:text-gray-400 transition-all duration-150"
+        data-page="insights">Insights</button>
+      <button
+        class="nav-btn flex-1 py-2 px-3 border-none bg-transparent rounded-lg text-sm font-medium cursor-pointer text-gray-600 dark:text-gray-400 transition-all duration-150"
+        data-page="account">Account</button>
+    </div>
+
+    <!-- Page: Log Activity -->
+    <div id="page-log" class="page active">
+      <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 md:p-5 mb-4">
+        <div class="text-sm font-medium text-gray-600 dark:text-gray-400 mb-4">Add activity</div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-2.5 mb-2.5">
+          <div>
+            <div class="text-xs text-gray-600 dark:text-gray-400 mb-1.5">Category</div>
+            <select
+              class="input w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:border-emerald-600"
+              id="cat-select">
+              <option value="transport">Transport</option>
+              <option value="food">Food</option>
+              <option value="energy">Energy</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div>
+            <div class="text-xs text-gray-600 dark:text-gray-400 mb-1.5">Activity</div>
+            <select
+              class="input w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:border-emerald-600"
+              id="act-select"></select>
+          </div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-2.5 mb-3.5">
+          <div>
+            <div class="text-xs text-gray-600 dark:text-gray-400 mb-1.5">Quantity</div>
+            <input
+              class="input w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:border-emerald-600"
+              type="number" id="qty-input" value="1" min="0.1" step="0.1">
+          </div>
+          <div>
+            <div class="text-xs text-gray-600 dark:text-gray-400 mb-1.5">CO₂ per unit (kg)</div>
+            <input
+              class="input w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:border-emerald-600"
+              type="number" id="co2-input" step="0.01" readonly>
+          </div>
+        </div>
+        <div class="flex items-center justify-between">
+          <div class="text-sm text-gray-600 dark:text-gray-400">Total: <span id="calc-total"
+              class="font-medium text-gray-900 dark:text-gray-100">0.00 kg CO₂</span></div>
+          <button
+            class="px-4 py-2 border border-emerald-600 rounded-lg bg-emerald-600 text-white cursor-pointer text-sm font-medium hover:bg-emerald-700 transition-all duration-150 btn:active:scale-95"
+            id="add-btn">Add to log</button>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-between mb-3">
+        <div class="text-base font-medium">Today's log</div>
+        <div class="flex gap-1.5 flex-wrap">
+          <button
+            class="filter-btn px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-full bg-transparent cursor-pointer text-xs font-medium text-gray-600 dark:text-gray-400 transition-all duration-150 active"
+            data-filter="all">All</button>
+          <button
+            class="filter-btn px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-full bg-transparent cursor-pointer text-xs font-medium text-gray-600 dark:text-gray-400 transition-all duration-150"
+            data-filter="food">Food</button>
+          <button
+            class="filter-btn px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-full bg-transparent cursor-pointer text-xs font-medium text-gray-600 dark:text-gray-400 transition-all duration-150"
+            data-filter="transport">Transport</button>
+          <button
+            class="filter-btn px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-full bg-transparent cursor-pointer text-xs font-medium text-gray-600 dark:text-gray-400 transition-all duration-150"
+            data-filter="energy">Energy</button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+        <div class="bg-gray-100 dark:bg-gray-800 rounded-lg p-4">
+          <div class="text-xs text-gray-600 dark:text-gray-400 mb-1">Today</div>
+          <div class="text-2xl font-medium text-gray-900 dark:text-gray-100" id="m-today">0.0</div>
+          <div class="text-xs text-gray-500 dark:text-gray-500 mt-0.5">kg CO₂</div>
+        </div>
+        <div class="bg-gray-100 dark:bg-gray-800 rounded-lg p-4">
+          <div class="text-xs text-gray-600 dark:text-gray-400 mb-1">This week</div>
+          <div class="text-2xl font-medium text-gray-900 dark:text-gray-100" id="m-week">0.0</div>
+          <div class="text-xs text-gray-500 dark:text-gray-500 mt-0.5">kg CO₂</div>
+        </div>
+        <div class="bg-gray-100 dark:bg-gray-800 rounded-lg p-4">
+          <div class="text-xs text-gray-600 dark:text-gray-400 mb-1">This month</div>
+          <div class="text-2xl font-medium text-gray-900 dark:text-gray-100" id="m-month">0.0</div>
+          <div class="text-xs text-gray-500 dark:text-gray-500 mt-0.5">kg CO₂</div>
+        </div>
+        <div class="bg-gray-100 dark:bg-gray-800 rounded-lg p-4">
+          <div class="text-xs text-gray-600 dark:text-gray-400 mb-1">Activities</div>
+          <div class="text-2xl font-medium text-gray-900 dark:text-gray-100" id="m-count">0</div>
+          <div class="text-xs text-gray-500 dark:text-gray-500 mt-0.5">logged</div>
+        </div>
+      </div>
+
+      <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 md:p-5">
+        <div id="activity-list">
+          <div class="text-center py-8 text-gray-500 dark:text-gray-400 text-sm">No activities yet — add your first
+            above</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Page: Dashboard -->
+    <div id="page-dashboard" class="page hidden">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+        <div class="bg-gray-100 dark:bg-gray-800 rounded-lg p-4">
+          <div class="text-xs text-gray-600 dark:text-gray-400 mb-1">Total logged</div>
+          <div class="text-2xl font-medium text-gray-900 dark:text-gray-100" id="d-total">0.0</div>
+          <div class="text-xs text-gray-500 dark:text-gray-500 mt-0.5">kg CO₂ all time</div>
+        </div>
+        <div class="bg-gray-100 dark:bg-gray-800 rounded-lg p-4">
+          <div class="text-xs text-gray-600 dark:text-gray-400 mb-1">Weekly goal</div>
+          <div class="text-2xl font-medium text-gray-900 dark:text-gray-100" id="d-goal-pct">0%</div>
+          <div class="text-xs text-gray-500 dark:text-gray-500 mt-0.5">of 70 kg budget used</div>
+        </div>
+        <div class="bg-gray-100 dark:bg-gray-800 rounded-lg p-4">
+          <div class="text-xs text-gray-600 dark:text-gray-400 mb-1">Community avg</div>
+          <div class="text-2xl font-medium text-gray-900 dark:text-gray-100">84.0</div>
+          <div class="text-xs text-gray-500 dark:text-gray-500 mt-0.5">kg CO₂/week</div>
+        </div>
+      </div>
+
+      <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 md:p-5 mb-4">
+        <div class="text-sm font-medium text-gray-600 dark:text-gray-400 mb-4">Weekly breakdown (last 7 days)</div>
+        <div class="flex gap-1 mb-2" id="week-bars"></div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 md:p-5">
+          <div class="text-sm font-medium text-gray-600 dark:text-gray-400 mb-4">Emissions by category</div>
+          <div class="relative h-48"><canvas id="pieChart" role="img"
+              aria-label="Pie chart showing emissions by category">No data yet</canvas></div>
+          <div id="pie-legend" class="flex flex-wrap gap-2.5 mt-3 text-xs text-gray-600 dark:text-gray-400"></div>
+        </div>
+        <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 md:p-5">
+          <div class="text-sm font-medium text-gray-600 dark:text-gray-400 mb-4">vs. community average</div>
+          <div id="comparison-view"></div>
+        </div>
+      </div>
+
+      <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 md:p-5">
+        <div class="text-sm font-medium text-gray-600 dark:text-gray-400 mb-4">Streak & consistency</div>
+        <div class="flex items-center gap-1.5 p-3 bg-gray-100 dark:bg-gray-800 rounded-lg mb-3">
+          <div class="text-2xl font-medium" id="streak-count">0</div>
+          <div>
+            <div class="text-sm font-medium">Day streak</div>
+            <div class="text-xs text-gray-600 dark:text-gray-400">Keep logging daily to build your streak</div>
+          </div>
+        </div>
+        <div class="text-xs text-gray-600 dark:text-gray-400">Logging activity helps identify patterns and opportunities
+          to reduce emissions over time.</div>
+      </div>
+    </div>
+
+    <!-- Page: Insights -->
+    <div id="page-insights" class="page hidden">
+      <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 md:p-5 mb-4">
+        <div class="text-sm font-medium text-gray-600 dark:text-gray-400 mb-4">Top emission sources</div>
+        <div id="top-sources"></div>
+      </div>
+      <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 md:p-5 mb-4">
+        <div class="text-sm font-medium text-gray-600 dark:text-gray-400 mb-4">Personalised tips</div>
+        <div id="tips-list"></div>
+      </div>
+      <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 md:p-5 mb-4">
+        <div class="text-sm font-medium text-gray-600 dark:text-gray-400 mb-4">Weekly reduction goal</div>
+        <div id="goal-tracker"></div>
+      </div>
+      <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 md:p-5">
+        <div class="text-sm font-medium text-gray-600 dark:text-gray-400 mb-4">Emissions by category (bar)</div>
+        <div class="relative h-56"><canvas id="barChart" role="img" aria-label="Bar chart of emissions by category">No
+            data yet</canvas></div>
+      </div>
+    </div>
+
+    <!-- Page: Account -->
+    <div id="page-account" class="page hidden">
+      <div id="auth-panel"></div>
+    </div>
+  </div>
+  <div
+    class="toast fixed bottom-6 right-6 bg-emerald-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium opacity-0 pointer-events-none z-50"
+    id="toast"></div>
+
+  <script src="app.js"></script>
+</body>
+
+</html>
